@@ -1,0 +1,209 @@
+openapi: 3.0.0
+info:
+  title: Collection Service API
+  version: 1.0.0
+  description: >
+    API for managing outfit collections (playlists) for users.
+    Includes CRUD operations and playlist-like outfit management.
+
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /collection/add_collection:
+    post:
+      summary: Create a new collection
+      description: Creates a new outfit collection for a specific user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, name]
+              properties:
+                user_id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: "Spring Looks"
+                description:
+                  type: string
+                  example: "Light and colorful outfits for spring"
+      responses:
+        "201":
+          description: Collection created successfully
+        "400":
+          description: Missing required parameters
+        "500":
+          description: Server error
+
+  /collection/add_collection_with_outfits:
+    post:
+      summary: Create a new collection and immediately add outfits
+      description: >
+        Creates a new collection (playlist) and immediately associates a list of outfit IDs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, name]
+              properties:
+                user_id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: "Winter Essentials"
+                description:
+                  type: string
+                  example: "Warm outfits for winter"
+                outfits:
+                  type: array
+                  items:
+                    type: integer
+                  example: [3, 5, 8]
+      responses:
+        "201":
+          description: Collection created successfully (with or without outfits)
+        "400":
+          description: Missing user_id or name
+        "500":
+          description: Internal server error
+
+  /collection/get_all_collections/{user_id}:
+    get:
+      summary: Retrieve all collections for a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: integer }
+          description: ID of the user
+      responses:
+        "200": { description: Collections retrieved successfully }
+        "404": { description: No collections found }
+        "500": { description: Server error }
+
+  /collection/get_collection/{user_id}/{collection_id}:
+    get:
+      summary: Retrieve a specific collection and its outfits
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: collection_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Collection retrieved successfully }
+        "404": { description: Collection not found }
+        "500": { description: Server error }
+
+  /collection/get_collection_by_name/{user_id}/{collection_name}:
+    get:
+      summary: Retrieve a collection by name (case-insensitive search)
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: collection_name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Collection retrieved successfully }
+        "404": { description: Collection not found }
+        "500": { description: Server error }
+
+  /collection/update_collection/{user_id}/{collection_id}:
+    put:
+      summary: Update an existing collection
+      description: Updates the name and/or description of a user’s collection.
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: collection_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, example: "Updated Collection Name" }
+                description: { type: string, example: "New description for the collection" }
+      responses:
+        "200": { description: Collection updated successfully }
+        "400": { description: No fields provided for update }
+        "404": { description: Collection not found }
+        "500": { description: Server error }
+
+  /collection/delete_collection/{user_id}/{collection_id}:
+    delete:
+      summary: Delete a collection
+      description: Deletes a user’s collection and its associated outfits.
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: collection_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Collection deleted successfully }
+        "404": { description: Collection not found }
+        "500": { description: Server error }
+
+  /collection/add_outfit_to_collection:
+    post:
+      summary: Add an outfit to a collection
+      description: Adds an existing outfit to an existing collection (avoids duplicates).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [collection_id, outfit_id]
+              properties:
+                collection_id:
+                  type: integer
+                  example: 6
+                outfit_id:
+                  type: integer
+                  example: 5
+      responses:
+        "201": { description: Outfit added successfully }
+        "404": { description: Collection or outfit not found }
+        "409": { description: Outfit already exists in the collection }
+        "500": { description: Server error }
+
+  /collection/remove_outfit_from_collection/{collection_id}/{outfit_id}:
+    delete:
+      summary: Remove an outfit from a collection
+      parameters:
+        - name: collection_id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: outfit_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Outfit removed successfully }
+        "404": { description: Outfit not found in collection }
+        "500": { description: Server error }

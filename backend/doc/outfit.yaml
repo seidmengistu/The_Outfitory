@@ -1,0 +1,199 @@
+openapi: 3.0.0
+info:
+  title: Outfit Service API
+  version: 1.0.0
+  description: REST API for managing user outfits and associated clothes.
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+paths:
+  /outfit/add_outfit:
+    post:
+      summary: Create a new outfit for a user
+      description: |
+        Creates a new outfit entry for a given user.  
+        Optionally, a list of `cloth_id` can be included to associate clothes with the new outfit.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, name]
+              properties:
+                user_id:
+                  type: integer
+                  example: 1
+                  description: ID of the user who owns the outfit
+                name:
+                  type: string
+                  example: "Outfit Estivo"
+                  description: Name of the outfit
+                description:
+                  type: string
+                  example: "Comodo e leggero per giornate calde"
+                  description: Optional text description of the outfit
+                clothes:
+                  type: array
+                  items:
+                    type: integer
+                    example: 5
+                  description: Optional list of cloth_id to associate
+      responses:
+        "201":
+          description: Outfit successfully created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 201 }
+                  message: { type: string, example: "Outfit 'Outfit Estivo' creato con successo!" }
+                  data:
+                    type: object
+                    properties:
+                      outfit_id: { type: integer, example: 12 }
+        "400": { description: Missing required parameters }
+        "500": { description: Internal server error }
+
+  /outfit/get_all_outfits/{user_id}:
+    get:
+      summary: Retrieve all outfits of a specific user
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: integer }
+          description: ID of the user whose outfits are being requested
+      responses:
+        "200":
+          description: List of outfits successfully retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: "Outfit recuperati con successo!" }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        outfit_id: { type: integer, example: 3 }
+                        user_id: { type: integer, example: 1 }
+                        name: { type: string, example: "Outfit Invernale" }
+                        description: { type: string, example: "Perfetto per giornate fredde" }
+                        created_at: { type: string, example: "2025-10-27T18:30:00" }
+        "404": { description: No outfits found }
+        "500": { description: Internal server error }
+
+  /outfit/get_outfit/{user_id}/{outfit_id}:
+    get:
+      summary: Retrieve a specific outfit with its associated clothes
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: integer }
+          description: ID of the user
+        - in: path
+          name: outfit_id
+          required: true
+          schema: { type: integer }
+          description: ID of the outfit
+      responses:
+        "200":
+          description: Outfit and associated clothes successfully retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: "Outfit recuperato con successo!" }
+                  data:
+                    type: object
+                    properties:
+                      outfit_id: { type: integer, example: 5 }
+                      user_id: { type: integer, example: 1 }
+                      name: { type: string, example: "Outfit Estivo" }
+                      description: { type: string, example: "Comodo e leggero" }
+                      clothes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            cloth_id: { type: integer, example: 3 }
+                            name: { type: string, example: "T-shirt bianca" }
+                            color: { type: string, example: "white" }
+                            category: { type: string, example: "shirt" }
+        "404": { description: Outfit not found }
+        "500": { description: Internal server error }
+
+  /outfit/update_outfit/{user_id}/{outfit_id}:
+    put:
+      summary: Update an existing outfit and optionally its associated clothes
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: integer }
+          description: ID of the user
+        - in: path
+          name: outfit_id
+          required: true
+          schema: { type: integer }
+          description: ID of the outfit to update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, example: "Outfit da Ufficio" }
+                description: { type: string, example: "Elegante ma comodo" }
+                clothes:
+                  type: array
+                  items: { type: integer, example: 7 }
+                  description: New list of associated clothes
+      responses:
+        "200":
+          description: Outfit successfully updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: "Outfit aggiornato con successo!" }
+        "400": { description: No fields provided to update }
+        "404": { description: Outfit not found }
+        "500": { description: Internal server error }
+
+  /outfit/delete_outfit/{user_id}/{outfit_id}:
+    delete:
+      summary: Delete an outfit and its associated items
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: integer }
+          description: ID of the user
+        - in: path
+          name: outfit_id
+          required: true
+          schema: { type: integer }
+          description: ID of the outfit to delete
+      responses:
+        "200":
+          description: Outfit successfully deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: "Outfit eliminato con successo!" }
+        "404": { description: Outfit not found or already deleted }
+        "500": { description: Internal server error }

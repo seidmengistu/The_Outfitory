@@ -1,0 +1,111 @@
+name: Deploy backend
+
+on:
+  push:
+    tags:
+      - deploy-backend   # trigger when this tag is pushed or updated
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prod-backend-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Prod over SSH
+    runs-on: ubuntu-latest
+    environment: Prod   # uses the 'Prod' environment for vars & secrets
+
+    steps:
+      - name: Check out repo (for branch verification)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # we need history/branches to verify ancestry
+
+      - name: Verify the tag commit is on the backend branch
+        id: verify
+        shell: bash
+        run: |
+          git fetch origin backend --depth=1
+          if git branch -r --contains "$GITHUB_SHA" | grep -q 'origin/backend'; then
+            echo "on_backend=true" >> "$GITHUB_OUTPUT"
+            echo "Tag commit is on origin/backend."
+          else
+            echo "on_backend=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Tag commit is NOT on origin/backend. Skipping deployment."
+          fi
+
+      - name: Stop if not on backend branch
+        if: steps.verify.outputs.on_backend != 'true'
+        run: exit 0
+
+      - name: Deploy over SSH
+        # Uses the environment variables & secrets from environment 'Prod'
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ vars.HOST }}
+          username: ${{ vars.DEPLOYER_USER }}
+          key: ${{ secrets.NUC_PRIVATE_KEY }}
+          port: ${{ vars.SSH_PORT }}
+          script_stop: true
+          command_timeout: 30m
+          # --- Remote script begins here ---
+          script: |
+            set -Eeuo pipefail
+            trap 'code=$?; echo "::error::Deployment failed at line $LINENO (exit $code)"; exit $code' ERR
+
+            echo "🚀 Deploying tag '${{ github.ref_name }}' (commit ${{ github.sha }}) to Prod..."
+
+            cd "${{ vars.BACKEND_DIR }}"
+
+            # Ensure repo directory exists or clone it (server has a deploy key on GitHub)
+            if [ ! -d "the-outfitory/.git" ]; then
+              echo "Cloning repository into the-outfitory..."
+              rm -rf the-outfitory || true
+              ssh-keyscan -H github.com >> ~/.ssh/known_hosts || true
+              git clone -b backend --single-branch "git@github.com:${{ github.repository }}.git" the-outfitory
+            fi
+
+            cd the-outfitory
+
+            # Make sure origin is SSH and pull latest backend
+            git remote set-url origin "git@github.com:${{ github.repository }}.git"
+            git fetch origin backend
+            git checkout backend
+            git pull --ff-only origin backend
+
+            # Use docker compose v2 if available, else docker-compose
+            if docker compose version >/dev/null 2>&1; then
+              DC="sudo docker compose"
+            elif command -v docker-compose >/dev/null 2>&1; then
+              DC="sudo docker-compose"
+            else
+              echo "::error::Neither 'docker compose' nor 'docker-compose' is installed on the remote host."
+              exit 1
+            fi
+            
+            cd backend
+
+            # Recreate services
+            $DC down --remove-orphans
+
+            # --- NEW: remove the old outfitory-service image ---
+            # try to get the image via compose (v2 supports --quiet)
+            IMG_ID="$($DC images --quiet outfitory-service 2>/dev/null || true)"
+            if [ -z "$IMG_ID" ]; then
+              # fallback: look it up by repo/name pattern
+              IMG_ID="$(sudo docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' \
+                        | awk '/outfitory[-_]service/ {print $2; exit}')"
+            fi
+            if [ -n "$IMG_ID" ]; then
+              echo "Removing existing outfitory-service image ($IMG_ID)..."
+              sudo docker image rm -f "$IMG_ID" || true
+            else
+              echo "No existing outfitory-service image found."
+            fi
+
+            $DC up -d
+
+            echo "✅ Deployment successful."

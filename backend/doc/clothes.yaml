@@ -1,0 +1,113 @@
+openapi: 3.0.0
+info:
+  title: Clothes Service API
+  version: 1.0.0
+  description: REST API for managing user clothing items.
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+paths:
+  /clothes/get_all_clothes/{user_id}:
+    get:
+      summary: Retrieve all clothes belonging to a specific user
+      parameters:
+        - in: path
+          name: user_id
+          schema: { type: integer }
+          required: true
+          description: ID of the user whose clothes are being requested
+      responses:
+        "200": { description: Clothes successfully retrieved }
+        "404": { description: No clothes found for this user }
+        "500": { description: Server error }
+
+  /clothes/get_single_cloth/{user_id}/{cloth_id}:
+    get:
+      summary: Retrieve a specific clothing item of a user
+      parameters:
+        - { in: path, name: user_id, required: true, schema: { type: integer }, description: "User ID" }
+        - { in: path, name: cloth_id, required: true, schema: { type: integer }, description: "Cloth ID" }
+      responses:
+        "200": { description: Clothing item successfully retrieved }
+        "404": { description: Clothing item not found }
+        "500": { description: Server error }
+
+  /clothes/add_cloth:
+    post:
+      summary: Add a new clothing item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, name]
+              properties:
+                user_id: { type: integer, description: "ID of the user owning the item" }
+                name: { type: string, description: "Name of the clothing item" }
+                category: { type: string, description: "Category (e.g., shirt, pants)" }
+                color: { type: string, description: "Color of the item" }
+                season: { type: string, description: "Season of use (e.g., summer, winter)" }
+                occasion: { type: string, description: "Occasion (e.g., formal, casual)" }
+                image_url: { type: string, description: "Optional image URL" }
+                notes: { type: string, description: "Additional notes" }
+      responses:
+        "201": { description: Clothing item successfully added }
+        "400": { description: Missing or invalid parameters }
+        "500": { description: Server error }
+
+  /clothes/update_cloth/{user_id}/{cloth_id}:
+    put:
+      summary: Update fields of an existing clothing item
+      parameters:
+        - { in: path, name: user_id, required: true, schema: { type: integer }, description: "User ID" }
+        - { in: path, name: cloth_id, required: true, schema: { type: integer }, description: "Cloth ID" }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, description: "Updated name" }
+                category: { type: string, description: "Updated category" }
+                color: { type: string, description: "Updated color" }
+                season: { type: string, description: "Updated season" }
+                occasion: { type: string, description: "Updated occasion" }
+                image_url: { type: string, description: "Updated image URL" }
+                notes: { type: string, description: "Updated notes" }
+      responses:
+        "200": { description: Clothing item successfully updated }
+        "400": { description: No fields provided for update }
+        "404": { description: Clothing item not found }
+        "500": { description: Server error }
+
+  /clothes/delete_cloth/{user_id}/{cloth_id}:
+    delete:
+      summary: Delete a clothing item
+      parameters:
+        - { in: path, name: user_id, required: true, schema: { type: integer }, description: "User ID" }
+        - { in: path, name: cloth_id, required: true, schema: { type: integer }, description: "Cloth ID" }
+      responses:
+        "200": { description: Clothing item successfully deleted }
+        "404": { description: Clothing item not found or already deleted }
+        "500": { description: Server error }
+
+  /clothes/filter_clothes/{user_id}:
+    post:
+      summary: Filter user's clothing items by category, color, season, or occasion
+      parameters:
+        - { in: path, name: user_id, required: true, schema: { type: integer }, description: "User ID" }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category: { oneOf: [{ type: string }, { type: array, items: { type: string } }], description: "Category filter (single or multiple values)" }
+                color: { oneOf: [{ type: string }, { type: array, items: { type: string } }], description: "Color filter (single or multiple values)" }
+                season: { oneOf: [{ type: string }, { type: array, items: { type: string } }], description: "Season filter (single or multiple values)" }
+                occasion: { oneOf: [{ type: string }, { type: array, items: { type: string } }], description: "Occasion filter (single or multiple values)" }
+      responses:
+        "200": { description: Filtered clothes successfully retrieved }
+        "404": { description: No clothes matched the given filters }
+        "500": { description: Server error }

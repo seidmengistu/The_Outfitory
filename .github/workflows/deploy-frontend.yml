@@ -1,0 +1,67 @@
+name: Deploy frontend to S3 (tag: deploy-frontend)
+
+on:
+  push:
+    tags:
+      - deploy-frontend
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prod-frontend-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-frontend:
+    name: Sync dist/ to S3 (Prod)
+    runs-on: ubuntu-latest
+    environment: Prod
+
+    steps:
+      - name: Check out repo (for branch verification)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify the tag commit is on the frontend branch
+        id: verify
+        shell: bash
+        run: |
+          git fetch origin frontend --depth=1
+          if git branch -r --contains "$GITHUB_SHA" | grep -q 'origin/frontend'; then
+            echo "on_frontend=true" >> "$GITHUB_OUTPUT"
+            echo "Tag commit is on origin/frontend."
+          else
+            echo "on_frontend=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Tag commit is NOT on origin/frontend. Skipping deployment."
+          fi
+
+      - name: Stop if not on frontend branch
+        if: steps.verify.outputs.on_frontend != 'true'
+        run: exit 0
+
+      - name: Ensure frontend/dist exists
+        run: |
+          if [ ! -d "frontend/dist" ]; then
+            echo "::error::frontend/dist not found. Build your frontend or adjust the path."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_SECRET_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sync to S3 (replace everything)
+        run: |
+          aws s3 sync \
+            frontend/dist "s3://${{ vars.AWS_S3_BUCKET }}/" \
+            --delete \
+            --region "${{ vars.AWS_REGION }}" \
+            --only-show-errors
+
+      - name: Done
+        run: echo "✅ Deployed frontend/dist to s3://${{ vars.AWS_S3_BUCKET }} (region ${{ vars.AWS_REGION }})"

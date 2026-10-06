@@ -1,0 +1,136 @@
+openapi: 3.0.3
+info:
+  title: Outfitory File Upload API
+  version: "1.0.0"
+  description: >
+    API per la gestione dei file immagine in Outfitory.
+    Permette di caricare e recuperare immagini salvate nel server (es. capi d’abbigliamento).
+
+servers:
+  - url: http://localhost:8000
+    description: Server locale di sviluppo
+
+paths:
+  /file/upload:
+    post:
+      summary: Carica un'immagine
+      description: >
+        Riceve un file immagine e lo salva nel server.  
+        L'utente deve fornire sia il file (`image`) che il nome desiderato (`filename`).  
+        Il file viene salvato nel volume Docker `uploads/`.
+      tags:
+        - Upload
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+                - filename
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Il file immagine da caricare (jpg, png, jpeg, gif)
+                filename:
+                  type: string
+                  example: maglione_beige.jpg
+                  description: Nome con cui salvare l'immagine nel server
+      responses:
+        "201":
+          description: Immagine caricata con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 201
+                  message:
+                    type: string
+                    example: Immagine caricata con successo.
+                  image_url:
+                    type: string
+                    example: http://localhost:8000/file/get/maglione_beige.jpg
+        "400":
+          description: Parametri mancanti o file non valido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 400
+                  message:
+                    type: string
+                    example: Parametro 'filename' obbligatorio.
+        "500":
+          description: Errore interno durante il caricamento del file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 500
+                  message:
+                    type: string
+                    example: Errore durante il caricamento del file.
+
+  /file/get/{filename}:
+    get:
+      summary: Recupera un'immagine salvata
+      description: >
+        Restituisce un file immagine precedentemente caricato.  
+        Se il file non esiste, restituisce un errore 404.
+      tags:
+        - Upload
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+            example: maglione_beige.jpg
+          description: Nome del file da recuperare
+      responses:
+        "200":
+          description: Restituisce l'immagine richiesta
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File non trovato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 404
+                  message:
+                    type: string
+                    example: File 'maglione_beige.jpg' non trovato.
+                  data:
+                    type: "null"
+        "500":
+          description: Errore interno del server
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 500
+                  message:
+                    type: string
+                    example: Errore durante la lettura del file.

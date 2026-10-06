@@ -1,0 +1,63 @@
+# ===========================================
+# 🧩 BACKEND DOCKER COMPOSE CONFIGURATION
+# ===========================================
+
+version: "3.9"
+
+services:
+  # ==========================
+  # ✅ OUTFITORY SERVICE
+  # ==========================
+  outfitory-service:
+    build:
+      context: ./src
+      dockerfile: ./Dockerfile
+    container_name: outfitory-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src/utils.py:/app/utils.py
+      - ./uploads:/app/uploads      
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=outfitory
+      - GROQ_API_KEY=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
+    secrets:
+      - certificate
+      - key
+      - secret_key
+
+  db:
+    image: mysql:8.0
+    container_name: db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: outfitory
+    ports:
+      - "3306:3306"
+    volumes:
+      # Volume gestito da Docker → evita problemi di permessi su Windows
+      - mysql-data:/var/lib/mysql
+      # Script SQL opzionale per inizializzare il DB
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+
+# ==========================
+# 🔐 SECRETS
+# ==========================
+secrets:
+  certificate:
+    file: ./secrets/cert.pem
+  key:
+    file: ./secrets/key.pem
+  secret_key:
+    file: ./secrets/secret_key.env
+
+# ==========================
+# 💾 VOLUMES
+# ==========================
+volumes:
+  mysql-data:
+  uploads-data:
