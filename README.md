@@ -1,195 +1,165 @@
 # Outfitory
 
-Outfitory is a digital wardrobe and outfit-planning application. It keeps clothing, saved outfits, weekly plans, collections, and travel packing lists in one place. Clothing photos can be classified during upload, and the AI stylist builds recommendations from the items that are actually available in the user's wardrobe.
+Outfitory is a full-stack digital wardrobe and outfit-planning application. Users can organize clothing, build and save outfits, plan a weekly wardrobe, create travel packing lists, and request AI recommendations grounded in items they actually own.
 
-## What the application does
+## What it demonstrates
 
-- Creates secure user accounts with JWT authentication.
-- Stores clothing photos and details such as category, season, occasion, fit, material, pattern, and colour.
-- Classifies uploaded clothing images and leaves the suggested details editable before saving.
-- Searches and filters wardrobe items by category.
-- Builds and saves outfits through a visual outfit creator.
-- Produces AI outfit recommendations that adapt to the available wardrobe and requested season or occasion.
-- Organises saved outfits into collections.
-- Plans outfits on a weekly calendar.
-- Creates dated packing lists for trips.
-- Supports light and dark themes.
+- React and TypeScript frontend organized by features, contexts, hooks, and API services
+- Flask REST API with service and route layers
+- JWT authentication with bcrypt password hashing
+- MySQL persistence for users, clothing, outfits, collections, calendars, and travel lists
+- LLM tool use with structured output validation
+- User-scoped authorization for wardrobe and recommendation data
+- Docker Compose development environment
+- Backend integration tests for the main resources
+
+## Core features
+
+- Register, sign in, and access protected application routes
+- Upload clothing images and store detailed wardrobe metadata
+- Search and filter clothes by category
+- Build outfits visually and save them into collections
+- Generate outfit recommendations using the signed-in user's wardrobe
+- Validate every recommended item against the database before returning it
+- Plan outfits on a weekly calendar
+- Create dated packing lists for trips
+- Switch between light and dark themes
+
+> **Current status:** the upload flow stores images successfully, but its classification response is placeholder metadata while a production vision classifier is being integrated. The wardrobe-grounded Groq recommendation flow is implemented in the backend.
 
 ## Application walkthrough
 
-### 1. Landing page
+| Dashboard | Wardrobe | AI recommendation |
+| --- | --- | --- |
+| ![Dashboard](images/2.png) | ![Wardrobe](images/5.png) | ![AI outfit recommendation](images/8.png) |
 
-The landing page introduces the application and provides direct links to registration and login.
+Additional screenshots are available in the [`images`](images) directory.
 
-![Outfitory landing page](images/1.png)
+## Architecture
 
-### 2. Dashboard
+```text
+React client
+  -> Axios service layer
+  -> Flask blueprints and authentication middleware
+      -> domain services
+          -> MySQL
+          -> local image storage
+          -> Groq through LangChain
+```
 
-After signing in, the dashboard shows wardrobe and outfit totals, quick actions, weather information, and the weekly planner.
-
-![Outfitory dashboard](images/2.png)
-
-### 3. Upload a clothing image
-
-New wardrobe items begin with an image upload. The file is stored by the backend and sent to the image classifier.
-
-![Choose a clothing image](images/3.png)
-
-### 4. Review the classification
-
-The classifier suggests a name, category, season, occasion, fit, material, pattern, and colours. Every value can be corrected before the item is saved.
-
-![Review classified clothing details](images/4.png)
-
-### 5. Manage the wardrobe
-
-Saved clothes appear in a searchable, filterable wardrobe with their images and key attributes.
-
-![Wardrobe page](images/5.png)
-
-### 6. Create an outfit manually
-
-The outfit creator lets users select pieces from the wardrobe, review the combination, name it, and save it.
-
-![Outfit creator](images/6.png)
-
-### 7. Prepare a travel list
-
-Travel lists group clothes for a trip between selected start and end dates.
-
-![Travel list page](images/7.png)
-
-### 8. Ask the AI stylist
-
-The stylist reads the current wardrobe and chooses compatible items without inventing unavailable clothes. Seasonal requests prefer matching and all-season pieces, while still working when a category such as tops or shoes is missing.
-
-![AI outfit recommendation](images/8.png)
-
-## Technology
+The recommendation service first loads the authenticated user's wardrobe, asks the model for structured item selections, and then verifies every returned ID and name against that user's database records. Invalid selections are rejected instead of being shown to the user.
 
 | Area | Technology |
 | --- | --- |
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS, React Router, Axios |
-| Backend | Python, Flask, Flask-CORS, PyJWT, bcrypt |
-| Database | MySQL 8 |
-| Outfit recommendations | Groq API through LangChain |
-| Image classification | Gemini vision API |
-| Local development | Docker Compose |
+| Frontend | React 19, TypeScript, Vite, React Router, Tailwind CSS, Material UI |
+| Backend | Python 3.12, Flask, Flask-CORS |
+| Data | MySQL 8, SQLAlchemy, SQLite chat history |
+| Authentication | PyJWT, bcrypt |
+| AI recommendations | Groq API, LangChain, Pydantic structured output |
+| Development | Docker Compose, pytest |
 
 ## Project layout
 
 ```text
-outfitory/
-├── backend/
-│   ├── db/                 MySQL schema and database files
-│   ├── src/
-│   │   ├── app.py          Flask application entry point
-│   │   ├── routes/         API endpoints
-│   │   ├── services/       Business, database, AI, and classification logic
-│   │   └── requirements.txt
-│   ├── uploads/            Uploaded clothing images
-│   └── docker-compose.yaml
-├── frontend/
-│   └── src/
-│       ├── components/     Shared and feature components
-│       ├── contexts/       Application state
-│       ├── pages/          Main screens
-│       ├── services/       Backend API clients
-│       └── styles/         Global styling
-└── images/                 README screenshots
+backend/
+  db/                  MySQL schema and initialization data
+  src/
+    routes/            HTTP endpoints grouped by resource
+    services/          Authentication, data, upload, and AI logic
+    middlewares/       Request authorization
+    tests/             Backend integration tests
+  uploads/             Local development image storage
+  docker-compose.yaml  API and MySQL services
+frontend/
+  src/
+    components/        Shared and feature components
+    contexts/          Application state
+    hooks/             Reusable feature hooks
+    pages/             Route-level screens
+    services/          Backend API clients
+    types/             TypeScript domain types
+images/                README screenshots
 ```
 
-## Running the project
+## Getting started
 
 ### Requirements
 
-- Docker Desktop
-- Node.js 18 or newer
-- A Groq API key for outfit recommendations
-- A Gemini API key for clothing-image classification
+- Docker Desktop or Docker Engine with Compose
+- Node.js 20 or newer
+- A Groq API key for AI recommendations
 
-### 1. Configure the backend
+### 1. Configure and start the backend
 
-Create `backend/.env` and add the required settings:
+```bash
+git clone https://github.com/seidmengistu/The_Outfitory.git
+cd The_Outfitory/backend
+cp .env.example .env
+docker compose up --build
+```
+
+Edit `backend/.env` before starting:
 
 ```env
 DB_HOST=db
 DB_USER=root
 DB_PASSWORD=root
 DB_NAME=outfitory
-
-SECRET_KEY=replace_with_a_long_random_value
+SECRET_KEY=replace-with-a-long-random-value
 JWT_EXPIRATION_TIME=7200
-ALGORITHM=HS256
-
-GROQ_API_KEY=your_groq_api_key
+GROQ_API_KEY=your-groq-api-key
 GROQ_MODEL=openai/gpt-oss-20b
-
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_VISION_MODEL=gemini-flash-lite-latest
 ```
 
-Do not commit `backend/.env`. It contains private credentials and is ignored by Git.
+The API runs at `http://localhost:8000`; MySQL is exposed at `localhost:3306` for local development.
 
-### 2. Start the API and database
-
-```bash
-docker compose -f backend/docker-compose.yaml up --build
-```
-
-The Flask API runs at `http://localhost:8000` and MySQL runs on port `3306`.
-
-### 3. Start the frontend
-
-In a second terminal:
+### 2. Start the frontend
 
 ```bash
-cd frontend
+cd ../frontend
+cp .env.example .env
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` in a browser.
+Open `http://localhost:5173`.
 
-To point the frontend at a different backend, create `frontend/.env`:
+## Tests and quality checks
 
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-## How the main flows work
-
-### Authentication
-
-Passwords are hashed with bcrypt. After login, the backend returns a JWT, and the frontend attaches it to protected API requests. Invalid or expired sessions return `401` and send the user back to the login screen.
-
-### Clothing upload and classification
-
-The backend sanitises the uploaded filename, saves the image, and sends it to the vision classifier. Classification suggestions are returned with the stored image URL. If the vision provider is temporarily unavailable, the image is still saved and the details can be entered manually.
-
-### AI recommendations
-
-The backend gives Groq a structured list of the signed-in user's wardrobe items. The stylist prefers pieces that match the requested season or are marked as all-season, validates every returned ID and name against the database, and returns only wardrobe items that belong to that user.
-
-## Useful commands
+Run the backend tests after the database is available:
 
 ```bash
-# Rebuild and restart the backend
-docker compose -f backend/docker-compose.yaml up -d --build
+cd backend/src
+pytest -q
+```
 
-# Follow backend logs
-docker compose -f backend/docker-compose.yaml logs -f outfitory-service
+Check and build the frontend with:
 
-# Build the frontend for production
-cd frontend && npm run build
-
-# Stop the backend and database
-docker compose -f backend/docker-compose.yaml down
+```bash
+cd frontend
+npm run lint
+npm run build
 ```
 
 ## Security notes
 
-- Keep API keys and JWT secrets in local environment files.
-- Never place real credentials in source files, screenshots, or commit history.
-- Use HTTPS, production database credentials, and a production WSGI server before deploying publicly.
-- Uploaded images and database contents are runtime data and should be backed up separately.
+- Keep JWT secrets, API keys, certificates, and database passwords in ignored environment files or a deployment secret manager.
+- Uploaded images, chat history, and database volumes are runtime data and should not be committed.
+- Use HTTPS, restricted CORS origins, non-default database credentials, and a production WSGI server before deployment.
+- If a credential has ever been committed publicly, removing the file is not sufficient: revoke or rotate the credential and purge it from Git history if necessary.
+
+## Roadmap
+
+- Replace placeholder upload classification with a tested vision-classification provider
+- Add frontend component and end-to-end tests
+- Add repeatable database migrations
+- Add CI for backend tests and frontend lint/build checks
+- Move chat history and uploaded media to production-managed storage
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
+
+## Author
+
+[Seid Mengistu](https://github.com/seidmengistu)

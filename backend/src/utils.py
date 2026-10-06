@@ -138,9 +138,15 @@ def send_response(message=""):
 
 # Secret keys and configurations
 # Secret keys and configurations
-SECRET_KEY = "73e8a1c4efc8d1f9e0e9241bd3c285740be019d57cd6711a2f7635cf09e8dc4a"  # Change to a secure value
-JWT_EXPIRATION_TIME = 7200  # 2 hour in seconds
-ALGORITHM = "HS256"  # JWT signing algorithm
+SECRET_KEY = os.getenv("SECRET_KEY")
+JWT_EXPIRATION_TIME = int(os.getenv("JWT_EXPIRATION_TIME", "7200"))
+ALGORITHM = "HS256"
+
+
+def require_secret_key():
+    if not SECRET_KEY:
+        raise RuntimeError("SECRET_KEY is required. Set it in the environment.")
+    return SECRET_KEY
 
 # Placeholder for user roles
 USER_ROLES = ["user", "admin"]
@@ -175,7 +181,7 @@ def generate_tokens(user_id, role,username,email):
         "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=JWT_EXPIRATION_TIME)
         # Scadenza
     }
-    id_token = jwt.encode(id_payload, SECRET_KEY, algorithm=ALGORITHM)
+    id_token = jwt.encode(id_payload, require_secret_key(), algorithm=ALGORITHM)
 
     # Access Token
     access_payload = {
@@ -190,7 +196,7 @@ def generate_tokens(user_id, role,username,email):
         # Scadenza
         "jti": f"{user_id}-{datetime.datetime.now(datetime.timezone.utc)}"  # ID unico del token
     }
-    access_token = jwt.encode(access_payload, SECRET_KEY, algorithm=ALGORITHM)
+    access_token = jwt.encode(access_payload, require_secret_key(), algorithm=ALGORITHM)
 
     return {"id_token": id_token, "access_token": access_token,"expires_in":access_payload["exp"]}
 
@@ -204,7 +210,7 @@ def validate_token(token):
         return {"error": "Token has been invalidated"}
     try:
         # Decodifica e verifica il token
-        decoded = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        decoded = jwt.decode(token, require_secret_key(), algorithms=[ALGORITHM])
         return {"valid": True, "decoded": decoded}
     except jwt.ExpiredSignatureError:
         return {"valid": False, "error": "Token has expired"}

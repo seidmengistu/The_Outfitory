@@ -87,3 +87,9 @@ dist-ssr
 .env.local
 .env
 /backend/img
+
+# Local secrets and runtime credentials
+backend/secrets/
+backend/*.env
+backend/src/*.pem
+backend/src/*.key

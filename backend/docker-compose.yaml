@@ -1,13 +1,4 @@
-# ===========================================
-# 🧩 BACKEND DOCKER COMPOSE CONFIGURATION
-# ===========================================
-
-version: "3.9"
-
 services:
-  # ==========================
-  # ✅ OUTFITORY SERVICE
-  # ==========================
   outfitory-service:
     build:
       context: ./src
@@ -17,47 +8,37 @@ services:
       - "8000:8000"
     volumes:
       - ./src/utils.py:/app/utils.py
-      - ./uploads:/app/uploads      
+      - ./uploads:/app/uploads
     environment:
-      - DB_HOST=db
-      - DB_USER=root
-      - DB_PASSWORD=root
-      - DB_NAME=outfitory
-      - GROQ_API_KEY=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
-    secrets:
-      - certificate
-      - key
-      - secret_key
+      DB_HOST: ${DB_HOST:-db}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-outfitory}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in backend/.env}
+      JWT_EXPIRATION_TIME: ${JWT_EXPIRATION_TIME:-7200}
+      GROQ_API_KEY: ${GROQ_API_KEY:?Set GROQ_API_KEY in backend/.env}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:8.0
-    container_name: db
-    restart: always
+    container_name: outfitory-db
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: outfitory
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-outfitory}
     ports:
       - "3306:3306"
     volumes:
-      # Volume gestito da Docker → evita problemi di permessi su Windows
       - mysql-data:/var/lib/mysql
-      # Script SQL opzionale per inizializzare il DB
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
-# ==========================
-# 🔐 SECRETS
-# ==========================
-secrets:
-  certificate:
-    file: ./secrets/cert.pem
-  key:
-    file: ./secrets/key.pem
-  secret_key:
-    file: ./secrets/secret_key.env
-
-# ==========================
-# 💾 VOLUMES
-# ==========================
 volumes:
   mysql-data:
-  uploads-data:
